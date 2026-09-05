@@ -34,20 +34,14 @@ First load bootstraps a Python virtualenv and downloads a headless Chromium
 (~110MB, one-time). This happens automatically in the background — the
 widget will just say "Salah" until it's done.
 
-Right-click the widget to pick your city from the live islom.uz list.
+Right-click the widget for **Salah Time Settings**:
+- **Change City** - live list from islom.uz
+- **Manage Reminders** - add/remove reminders (each is a prayer-or-all +
+  minutes-before), and toggle the notification sound
 
-## Notifications
-
-On by default: one notification per prayer per day, 10 minutes before it
-starts. Configure with:
-
-```bash
-omarchy bar set pursuit2703.salah-time beforeMinutes 15      # minutes before each prayer
-omarchy bar set pursuit2703.salah-time beforeMinutes -1      # disable entirely
-omarchy bar set pursuit2703.salah-time notificationsEnabled false
-```
-
-One offset applies to all six prayers - no per-prayer offsets (yet).
+Comes with one default reminder: all prayers, 10 minutes before, sound on.
+Add as many more as you like - e.g. "All prayers, 15 min before" plus
+"Fajr, 30 min before" for an extra early one.
 
 ## Credits
 

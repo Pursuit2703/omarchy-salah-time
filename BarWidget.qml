@@ -10,6 +10,8 @@ BarWidget {
 
   readonly property string pluginDir: Qt.resolvedUrl(".").toString().replace("file://", "")
   readonly property string scheduleFile: Quickshell.env("HOME") + "/.cache/omarchy-salah-time/schedule.json"
+  readonly property string remindersFile: Quickshell.env("HOME") + "/.config/omarchy-salah-time/reminders.json"
+  readonly property string soundFile: "/usr/share/sounds/freedesktop/stereo/message-new-instant.oga"
 
   readonly property var events: [
     { key: "fajr", label: "Fajr" },
@@ -24,14 +26,12 @@ BarWidget {
   property string labelText: "Salah"
   property string tooltipText: "Loading prayer times..."
 
-  // Settings, set via: omarchy bar set pursuit2703.salah-time <key> <value>
-  //   notificationsEnabled: true/false (default true)
-  //   beforeMinutes: minutes before each prayer to notify, -1 disables (default 10)
-  readonly property bool notificationsEnabled: {
-    const v = setting("notificationsEnabled", true)
-    return v === true || v === "true"
-  }
-  readonly property int beforeMinutes: Number(setting("beforeMinutes", 10))
+  // Reminders and sound-on-off are managed by right-click > Manage Reminders,
+  // which edits remindersFile directly (scripts/manage_reminders.sh). Default
+  // here matches the file's own default, used only until that file exists.
+  readonly property var defaultReminders: [{ id: "default", scope: "all", offsetMinutes: 10 }]
+  property var reminders: defaultReminders
+  property bool soundEnabled: true
 
   property string notifiedDate: ""
   property var notifiedKeys: ({})
@@ -44,7 +44,7 @@ BarWidget {
   }
 
   function maybeNotify(times, now, dateKey) {
-    if (!root.notificationsEnabled || root.beforeMinutes < 0) return
+    if (!root.reminders || root.reminders.length === 0) return
 
     if (root.notifiedDate !== dateKey) {
       root.notifiedDate = dateKey
@@ -52,24 +52,36 @@ BarWidget {
     }
 
     const nowMinutes = now.getHours() * 60 + now.getMinutes()
+    let firedAny = false
 
-    for (const ev of root.events) {
-      const eventMinute = root.minutesOf(times[ev.key])
-      if (eventMinute === null) continue
-      const targetMinute = eventMinute - root.beforeMinutes
-      if (targetMinute < 0 || targetMinute > 1439 || targetMinute !== nowMinutes) continue
+    for (const reminder of root.reminders) {
+      for (const ev of root.events) {
+        if (reminder.scope !== "all" && reminder.scope !== ev.key) continue
 
-      const key = dateKey + ":" + ev.key
-      if (root.notifiedKeys[key]) continue
-      root.notifiedKeys[key] = true
+        const eventMinute = root.minutesOf(times[ev.key])
+        if (eventMinute === null) continue
+        const offset = Number(reminder.offsetMinutes)
+        const targetMinute = eventMinute - offset
+        if (targetMinute < 0 || targetMinute > 1439 || targetMinute !== nowMinutes) continue
 
-      const eventTime = times[ev.key]
-      notifyProc.command = [
-        "omarchy-notification-send", "-u", "normal",
-        ev.label + " reminder",
-        ev.label + " starts in " + root.beforeMinutes + " min (" + eventTime + ")."
-      ]
-      notifyProc.running = true
+        const key = dateKey + ":" + reminder.id + ":" + ev.key
+        if (root.notifiedKeys[key]) continue
+        root.notifiedKeys[key] = true
+        firedAny = true
+
+        const eventTime = times[ev.key]
+        notifyProc.command = [
+          "omarchy-notification-send", "-u", "normal",
+          ev.label + " reminder",
+          ev.label + " starts in " + offset + " min (" + eventTime + ")."
+        ]
+        notifyProc.running = true
+      }
+    }
+
+    if (firedAny && root.soundEnabled) {
+      soundProc.command = ["paplay", root.soundFile]
+      soundProc.running = true
     }
   }
 
@@ -92,7 +104,7 @@ BarWidget {
   function updateDisplay() {
     if (!root.scheduleData || !root.scheduleData.times) {
       root.labelText = "Salah"
-      root.tooltipText = "No data yet - right-click to pick a city"
+      root.tooltipText = "No data yet - right-click for settings"
       return
     }
 
@@ -119,7 +131,7 @@ BarWidget {
     if (!chosen) chosen = soonestFallback
     if (!chosen) {
       root.labelText = "Salah"
-      root.tooltipText = "No data yet - right-click to pick a city"
+      root.tooltipText = "No data yet - right-click for settings"
       return
     }
 
@@ -138,7 +150,7 @@ BarWidget {
       lines.push(ev.label + ": " + (times[ev.key] || "--:--"))
     }
     lines.push("")
-    lines.push("Right-click to change city")
+    lines.push("Right-click for settings")
     root.tooltipText = lines.join("\n")
   }
 
@@ -154,6 +166,24 @@ BarWidget {
         root.scheduleData = null
       }
       root.updateDisplay()
+    }
+    onFileChanged: reload()
+  }
+
+  FileView {
+    id: remindersView
+    path: root.remindersFile
+    watchChanges: true
+    printErrors: false
+    onLoaded: {
+      try {
+        const parsed = JSON.parse(text())
+        root.reminders = Array.isArray(parsed.reminders) ? parsed.reminders : root.defaultReminders
+        root.soundEnabled = parsed.soundEnabled !== false
+      } catch (e) {
+        root.reminders = root.defaultReminders
+        root.soundEnabled = true
+      }
     }
     onFileChanged: reload()
   }
@@ -181,13 +211,20 @@ BarWidget {
   }
 
   Process {
-    id: pickCityProc
-    command: ["bash", root.pluginDir + "scripts/pick_city.sh"]
-    onExited: scheduleView.reload()
+    id: settingsProc
+    command: ["bash", root.pluginDir + "scripts/settings_menu.sh"]
+    onExited: {
+      scheduleView.reload()
+      remindersView.reload()
+    }
   }
 
   Process {
     id: notifyProc
+  }
+
+  Process {
+    id: soundProc
   }
 
   Text {
@@ -209,7 +246,7 @@ BarWidget {
     cursorShape: Qt.PointingHandCursor
     onClicked: function(mouse) {
       if (mouse.button === Qt.RightButton) {
-        pickCityProc.running = true
+        settingsProc.running = true
       } else {
         refreshProc.running = true
       }
