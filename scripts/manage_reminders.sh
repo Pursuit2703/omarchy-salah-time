@@ -18,7 +18,10 @@ add_reminder() {
   # omarchy-menu-input (free-text entry) doesn't currently accept keyboard
   # input reliably on this system - route around it with a preset list.
   local minutes_label
-  minutes_label=$(omarchy-menu-select "Minutes before $scope" "5 minutes" "10 minutes" "15 minutes" "20 minutes" "30 minutes" "45 minutes" "60 minutes") || return 0
+  minutes_label=$(omarchy-menu-select "Minutes before $scope" \
+    "1 minute" "2 minutes" "3 minutes" "5 minutes" "10 minutes" "15 minutes" \
+    "20 minutes" "25 minutes" "30 minutes" "40 minutes" "45 minutes" \
+    "50 minutes" "60 minutes" "90 minutes" "120 minutes") || return 0
   local minutes="${minutes_label%% *}"
 
   local id="r$(date +%s%N)"
