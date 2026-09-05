@@ -6,6 +6,10 @@
 DATA_DIR="$HOME/.local/share/omarchy-salah-time"
 export PLAYWRIGHT_BROWSERS_PATH="$DATA_DIR/browsers"
 export ISLOMUZ_CACHE_DIR="$DATA_DIR/islomuz-cache"
+# Python writes __pycache__ next to the .py files it imports - which live
+# inside the plugin folder. Same reload-storm risk as the venv/browser, just
+# smaller. Disable bytecode caching entirely rather than fight it.
+export PYTHONDONTWRITEBYTECODE=1
 VENV_PY="$DATA_DIR/venv/bin/python"
 
 mkdir -p "$DATA_DIR"
