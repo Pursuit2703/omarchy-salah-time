@@ -11,7 +11,7 @@ BarWidget {
   readonly property string pluginDir: Qt.resolvedUrl(".").toString().replace("file://", "")
   readonly property string scheduleFile: Quickshell.env("HOME") + "/.cache/omarchy-salah-time/schedule.json"
   readonly property string remindersFile: Quickshell.env("HOME") + "/.config/omarchy-salah-time/reminders.json"
-  readonly property string soundFile: "/usr/share/sounds/freedesktop/stereo/message-new-instant.oga"
+  readonly property string soundFile: root.pluginDir + "assets/ping.ogg"
 
   readonly property var events: [
     { key: "fajr", label: "Fajr" },
