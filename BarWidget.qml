@@ -147,7 +147,10 @@ BarWidget {
     font.pixelSize: Style.font.body
   }
 
+  readonly property bool tooltipHovered: visible && opacity > 0 && hoverArea.containsMouse
+
   MouseArea {
+    id: hoverArea
     anchors.fill: parent
     hoverEnabled: true
     acceptedButtons: Qt.LeftButton | Qt.RightButton
