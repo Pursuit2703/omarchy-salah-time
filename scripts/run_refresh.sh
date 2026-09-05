@@ -3,9 +3,10 @@
 # then refreshes the schedule (cheap unless it's a new month).
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$DIR/scripts/env.sh"
 
-if [ ! -x "$DIR/venv/bin/python" ]; then
+if [ ! -x "$VENV_PY" ]; then
   "$DIR/scripts/bootstrap.sh"
 fi
 
-PLAYWRIGHT_BROWSERS_PATH="$DIR/islomuz_api/data/browsers" "$DIR/venv/bin/python" "$DIR/scripts/refresh_schedule.py"
+"$VENV_PY" "$DIR/scripts/refresh_schedule.py"

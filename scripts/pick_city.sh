@@ -4,6 +4,8 @@
 set -euo pipefail
 
 PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$PLUGIN_DIR/scripts/env.sh"
+
 CONFIG_DIR="$HOME/.config/omarchy-salah-time"
 CACHE_DIR="$HOME/.cache/omarchy-salah-time"
 CONFIG_FILE="$CONFIG_DIR/config.json"
@@ -11,16 +13,15 @@ REGIONS_FILE="$CACHE_DIR/regions.json"
 
 mkdir -p "$CONFIG_DIR" "$CACHE_DIR"
 
-if [ ! -x "$PLUGIN_DIR/venv/bin/python" ]; then
+if [ ! -x "$VENV_PY" ]; then
   "$PLUGIN_DIR/scripts/bootstrap.sh"
 fi
-PY="$PLUGIN_DIR/venv/bin/python"
 
 if [ ! -f "$REGIONS_FILE" ]; then
-  "$PY" "$PLUGIN_DIR/scripts/refresh_regions.py"
+  "$VENV_PY" "$PLUGIN_DIR/scripts/refresh_regions.py"
 fi
 
-mapfile -t cities < <("$PY" -c "import json; print('\n'.join(json.load(open('$REGIONS_FILE'))['cities']))")
+mapfile -t cities < <("$VENV_PY" -c "import json; print('\n'.join(json.load(open('$REGIONS_FILE'))['cities']))")
 
 if [ ${#cities[@]} -eq 0 ]; then
   omarchy-notification-send -u critical "Salah Time" "Could not load city list. Check your connection."

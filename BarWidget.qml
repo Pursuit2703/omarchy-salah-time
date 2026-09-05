@@ -62,10 +62,10 @@ BarWidget {
       const minute = root.minutesOf(times[ev.key])
       if (minute === null) continue
       if (soonestFallback === null || minute < soonestFallback.minute) {
-        soonestFallback = { ...ev, minute: minute }
+        soonestFallback = { key: ev.key, label: ev.label, minute: minute }
       }
       if (minute >= nowMinutes && (chosen === null || minute < chosen.minute)) {
-        chosen = { ...ev, minute: minute }
+        chosen = { key: ev.key, label: ev.label, minute: minute }
       }
     }
     if (!chosen) chosen = soonestFallback
@@ -162,6 +162,4 @@ BarWidget {
     onEntered: if (root.bar) root.bar.showTooltip(root, root.tooltipText)
     onExited: if (root.bar) root.bar.hideTooltip(root)
   }
-
-  Component.onCompleted: refreshProc.running = true
 }
