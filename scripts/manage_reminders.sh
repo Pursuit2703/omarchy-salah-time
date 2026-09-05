@@ -15,12 +15,11 @@ add_reminder() {
     *) scope_key=$(echo "$scope" | tr '[:upper:]' '[:lower:]') ;;
   esac
 
-  local minutes
-  minutes=$(omarchy-menu-input "Minutes before $scope") || return 0
-  if ! [[ "$minutes" =~ ^[0-9]+$ ]]; then
-    omarchy-notification-send -u critical "Salah Time" "Enter a whole number of minutes."
-    return 0
-  fi
+  # omarchy-menu-input (free-text entry) doesn't currently accept keyboard
+  # input reliably on this system - route around it with a preset list.
+  local minutes_label
+  minutes_label=$(omarchy-menu-select "Minutes before $scope" "5 minutes" "10 minutes" "15 minutes" "20 minutes" "30 minutes" "45 minutes" "60 minutes") || return 0
+  local minutes="${minutes_label%% *}"
 
   local id="r$(date +%s%N)"
   jq --arg id "$id" --arg scope "$scope_key" --argjson minutes "$minutes" \
