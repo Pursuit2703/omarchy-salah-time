@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "pursuit2703.salah-time",
+  "name": "Salah Time",
+  "version": "1.0.0",
+  "author": "Pursuit2703",
+  "description": "Next prayer countdown, sourced live from islom.uz",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Salah Time",
+    "description": "Next prayer countdown, sourced live from islom.uz",
+    "category": "Utility",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
