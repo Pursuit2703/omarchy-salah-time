@@ -36,6 +36,19 @@ widget will just say "Salah" until it's done.
 
 Right-click the widget to pick your city from the live islom.uz list.
 
+## Notifications
+
+On by default: one notification per prayer per day, 10 minutes before it
+starts. Configure with:
+
+```bash
+omarchy bar set pursuit2703.salah-time beforeMinutes 15      # minutes before each prayer
+omarchy bar set pursuit2703.salah-time beforeMinutes -1      # disable entirely
+omarchy bar set pursuit2703.salah-time notificationsEnabled false
+```
+
+One offset applies to all six prayers - no per-prayer offsets (yet).
+
 ## Credits
 
 Vendors [`islomuz_api`](https://github.com/SpecialGuys/islomuz_api), a

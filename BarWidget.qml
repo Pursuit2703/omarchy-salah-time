@@ -24,8 +24,54 @@ BarWidget {
   property string labelText: "Salah"
   property string tooltipText: "Loading prayer times..."
 
+  // Settings, set via: omarchy bar set pursuit2703.salah-time <key> <value>
+  //   notificationsEnabled: true/false (default true)
+  //   beforeMinutes: minutes before each prayer to notify, -1 disables (default 10)
+  readonly property bool notificationsEnabled: {
+    const v = setting("notificationsEnabled", true)
+    return v === true || v === "true"
+  }
+  readonly property int beforeMinutes: Number(setting("beforeMinutes", 10))
+
+  property string notifiedDate: ""
+  property var notifiedKeys: ({})
+
   implicitWidth: labelDisplay.implicitWidth + Style.space(16)
   implicitHeight: barSize
+
+  function dateKeyOf(date) {
+    return date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate()
+  }
+
+  function maybeNotify(times, now, dateKey) {
+    if (!root.notificationsEnabled || root.beforeMinutes < 0) return
+
+    if (root.notifiedDate !== dateKey) {
+      root.notifiedDate = dateKey
+      root.notifiedKeys = ({})
+    }
+
+    const nowMinutes = now.getHours() * 60 + now.getMinutes()
+
+    for (const ev of root.events) {
+      const eventMinute = root.minutesOf(times[ev.key])
+      if (eventMinute === null) continue
+      const targetMinute = eventMinute - root.beforeMinutes
+      if (targetMinute < 0 || targetMinute > 1439 || targetMinute !== nowMinutes) continue
+
+      const key = dateKey + ":" + ev.key
+      if (root.notifiedKeys[key]) continue
+      root.notifiedKeys[key] = true
+
+      const eventTime = times[ev.key]
+      notifyProc.command = [
+        "omarchy-notification-send", "-u", "normal",
+        ev.label + " reminder",
+        ev.label + " starts in " + root.beforeMinutes + " min (" + eventTime + ")."
+      ]
+      notifyProc.running = true
+    }
+  }
 
   function minutesOf(hhmm) {
     if (!hhmm || typeof hhmm !== "string") return null
@@ -54,6 +100,8 @@ BarWidget {
     const now = new Date()
     const nowMinutes = now.getHours() * 60 + now.getMinutes()
     const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
+
+    root.maybeNotify(times, now, root.dateKeyOf(now))
 
     // Find the soonest event at/after now; wrap to first event tomorrow otherwise.
     let chosen = null
@@ -136,6 +184,10 @@ BarWidget {
     id: pickCityProc
     command: ["bash", root.pluginDir + "scripts/pick_city.sh"]
     onExited: scheduleView.reload()
+  }
+
+  Process {
+    id: notifyProc
   }
 
   Text {
