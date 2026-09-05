@@ -19,15 +19,14 @@ add_reminder() {
   # input reliably on this system - route around it with a preset list.
   local minutes_label
   minutes_label=$(omarchy-menu-select "Minutes before $scope" \
-    "1 minute" "2 minutes" "3 minutes" "5 minutes" "10 minutes" "15 minutes" \
-    "20 minutes" "25 minutes" "30 minutes" "40 minutes" "45 minutes" \
-    "50 minutes" "60 minutes" "90 minutes" "120 minutes") || return 0
+    "5 minutes" "10 minutes" "15 minutes" "20 minutes" "25 minutes" \
+    "30 minutes" "45 minutes" "60 minutes") || return 0
   local minutes="${minutes_label%% *}"
 
   local id="r$(date +%s%N)"
   jq --arg id "$id" --arg scope "$scope_key" --argjson minutes "$minutes" \
     '.reminders += [{id: $id, scope: $scope, offsetMinutes: $minutes}]' \
-    "$REMINDERS_FILE" > "$REMINDERS_FILE.tmp" && mv "$REMINDERS_FILE.tmp" "$REMINDERS_FILE"
+    "$REMINDERS_FILE" > "$REMINDERS_FILE.tmp" && commit_reminders "$REMINDERS_FILE.tmp"
 
   omarchy-notification-send -u low "Salah Time" "Reminder added: $scope, $minutes min before"
 }
@@ -53,7 +52,7 @@ remove_reminder() {
   for i in "${!labels[@]}"; do
     if [ "${labels[$i]}" = "$chosen" ]; then
       jq --arg id "${ids[$i]}" '.reminders |= map(select(.id != $id))' \
-        "$REMINDERS_FILE" > "$REMINDERS_FILE.tmp" && mv "$REMINDERS_FILE.tmp" "$REMINDERS_FILE"
+        "$REMINDERS_FILE" > "$REMINDERS_FILE.tmp" && commit_reminders "$REMINDERS_FILE.tmp"
       omarchy-notification-send -u low "Salah Time" "Reminder removed."
       return 0
     fi
@@ -65,7 +64,7 @@ toggle_sound() {
   current=$(jq -r '.soundEnabled' "$REMINDERS_FILE")
   local next="true"
   [ "$current" = "true" ] && next="false"
-  jq --argjson v "$next" '.soundEnabled = $v' "$REMINDERS_FILE" > "$REMINDERS_FILE.tmp" && mv "$REMINDERS_FILE.tmp" "$REMINDERS_FILE"
+  jq --argjson v "$next" '.soundEnabled = $v' "$REMINDERS_FILE" > "$REMINDERS_FILE.tmp" && commit_reminders "$REMINDERS_FILE.tmp"
   omarchy-notification-send -u low "Salah Time" "Reminder sound: $([ "$next" = "true" ] && echo On || echo Off)"
 }
 
