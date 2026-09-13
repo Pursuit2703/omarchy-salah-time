@@ -26,8 +26,7 @@ plain JSON API for that (`new.islom.uz/api/v1/regions`).
 ## Setup
 
 ```bash
-omarchy plugin add https://github.com/Pursuit2703/omarchy-salah-time.git
-omarchy plugin enable pursuit2703.salah-time
+omarchy plugin add https://github.com/Pursuit2703/omarchy-salah-time.git --enable
 ```
 
 First load bootstraps a Python virtualenv and downloads a headless Chromium
