@@ -67,21 +67,25 @@ BarWidget {
         const key = dateKey + ":" + reminder.id + ":" + ev.key
         if (root.notifiedKeys[key]) continue
         root.notifiedKeys[key] = true
-        firedAny = true
 
         const eventTime = times[ev.key]
-        notifyProc.command = [
-          "omarchy-notification-send", "-u", "normal",
+        // A bar-widget instance runs once per connected monitor, all on the
+        // same reminder clock, so every instance reaches this point in the
+        // same tick. claim_and_notify.sh arbitrates with an atomic mkdir so
+        // exactly one of them actually sends the notification and sound,
+        // no matter how many monitors are attached. Spawned as its own
+        // short-lived Process (rather than reusing one shared instance)
+        // so two reminders firing in the same tick don't clobber each other.
+        const claim = claimProcComponent.createObject(root, { command: [
+          "bash", root.pluginDir + "scripts/claim_and_notify.sh",
+          key,
           ev.label + " reminder",
-          ev.label + " starts in " + offset + " min (" + eventTime + ")."
-        ]
-        notifyProc.running = true
+          ev.label + " starts in " + offset + " min (" + eventTime + ").",
+          root.soundEnabled ? "1" : "0",
+          root.soundFile
+        ] })
+        if (claim) claim.running = true
       }
-    }
-
-    if (firedAny && root.soundEnabled) {
-      soundProc.command = ["paplay", root.soundFile]
-      soundProc.running = true
     }
   }
 
@@ -219,12 +223,12 @@ BarWidget {
     }
   }
 
-  Process {
-    id: notifyProc
-  }
-
-  Process {
-    id: soundProc
+  Component {
+    id: claimProcComponent
+    Process {
+      running: false
+      onExited: destroy()
+    }
   }
 
   Text {
