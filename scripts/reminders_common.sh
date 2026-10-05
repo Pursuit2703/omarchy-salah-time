@@ -4,7 +4,7 @@ REMINDERS_FILE="$HOME/.config/omarchy-salah-time/reminders.json"
 ensure_reminders_file() {
   mkdir -p "$(dirname "$REMINDERS_FILE")"
   if [ ! -f "$REMINDERS_FILE" ]; then
-    jq -n '{soundEnabled: true, reminders: [{id: "default", scope: "all", offsetMinutes: 10}]}' > "$REMINDERS_FILE"
+    jq -n '{soundEnabled: true, soundVolume: 50, reminders: [{id: "default", scope: "all", offsetMinutes: 10}]}' > "$REMINDERS_FILE"
   fi
 }
 

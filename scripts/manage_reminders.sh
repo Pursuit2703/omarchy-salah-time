@@ -68,13 +68,31 @@ toggle_sound() {
   omarchy-notification-send -u low "Salah Time" "Reminder sound: $([ "$next" = "true" ] && echo On || echo Off)"
 }
 
+set_volume() {
+  local choice
+  choice=$(omarchy-menu-select "Reminder sound volume" "Low (25%)" "Medium (50%)" "High (75%)" "Full (100%)") || return 0
+
+  local pct
+  case "$choice" in
+    "Low"*) pct=25 ;;
+    "Medium"*) pct=50 ;;
+    "High"*) pct=75 ;;
+    "Full"*) pct=100 ;;
+  esac
+
+  jq --argjson v "$pct" '.soundVolume = $v' "$REMINDERS_FILE" > "$REMINDERS_FILE.tmp" && commit_reminders "$REMINDERS_FILE.tmp"
+  omarchy-notification-send -u low "Salah Time" "Reminder sound volume: $pct%"
+}
+
 while true; do
   sound_state=$(jq -r 'if .soundEnabled then "On" else "Off" end' "$REMINDERS_FILE")
-  choice=$(omarchy-menu-select "Manage Reminders" "Add reminder" "Remove reminder" "Toggle sound (currently: $sound_state)" "Back") || break
+  volume_state=$(jq -r '.soundVolume // 50' "$REMINDERS_FILE")
+  choice=$(omarchy-menu-select "Manage Reminders" "Add reminder" "Remove reminder" "Toggle sound (currently: $sound_state)" "Sound volume (currently: $volume_state%)" "Back") || break
   case "$choice" in
     "Add reminder") add_reminder ;;
     "Remove reminder") remove_reminder ;;
     "Toggle sound"*) toggle_sound ;;
+    "Sound volume"*) set_volume ;;
     "Back") break ;;
   esac
 done

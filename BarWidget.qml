@@ -32,6 +32,7 @@ BarWidget {
   readonly property var defaultReminders: [{ id: "default", scope: "all", offsetMinutes: 10 }]
   property var reminders: defaultReminders
   property bool soundEnabled: true
+  property int soundVolume: 50
 
   property string notifiedDate: ""
   property var notifiedKeys: ({})
@@ -82,7 +83,8 @@ BarWidget {
           ev.label + " reminder",
           ev.label + " starts in " + offset + " min (" + eventTime + ").",
           root.soundEnabled ? "1" : "0",
-          root.soundFile
+          root.soundFile,
+          String(root.soundVolume)
         ] })
         if (claim) claim.running = true
       }
@@ -184,9 +186,11 @@ BarWidget {
         const parsed = JSON.parse(text())
         root.reminders = Array.isArray(parsed.reminders) ? parsed.reminders : root.defaultReminders
         root.soundEnabled = parsed.soundEnabled !== false
+        root.soundVolume = Number.isFinite(parsed.soundVolume) ? parsed.soundVolume : 50
       } catch (e) {
         root.reminders = root.defaultReminders
         root.soundEnabled = true
+        root.soundVolume = 50
       }
     }
     onFileChanged: reload()

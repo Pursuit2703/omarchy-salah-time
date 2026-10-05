@@ -9,13 +9,16 @@
 # regardless of how many monitors are attached.
 set -u
 LOCK_ROOT="$HOME/.cache/omarchy-salah-time/notified"
-KEY="$1" SUMMARY="$2" BODY="$3" PLAY_SOUND="$4" SOUND_FILE="$5"
+KEY="$1" SUMMARY="$2" BODY="$3" PLAY_SOUND="$4" SOUND_FILE="$5" VOLUME_PCT="${6:-50}"
 
 mkdir -p "$LOCK_ROOT" 2>/dev/null
 mkdir "$LOCK_ROOT/$KEY" 2>/dev/null || exit 0
 
 omarchy-notification-send -u normal "$SUMMARY" "$BODY"
-[ "$PLAY_SOUND" = "1" ] && paplay "$SOUND_FILE" &
+# paplay --volume is 0-65536 (65536 = 100%, PulseAudio's PA_VOLUME_NORM),
+# not a percent, hence the scale. Without this flag paplay plays at full
+# stream volume regardless of system output, which is jarring on headphones.
+[ "$PLAY_SOUND" = "1" ] && paplay --volume=$(( VOLUME_PCT * 65536 / 100 )) "$SOUND_FILE" &
 
 # Trim claims older than 2 days so this directory doesn't grow forever.
 find "$LOCK_ROOT" -maxdepth 1 -mindepth 1 -mtime +2 -exec rm -rf {} + 2>/dev/null
