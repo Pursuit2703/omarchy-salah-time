@@ -13,7 +13,7 @@ REGIONS_FILE="$CACHE_DIR/regions.json"
 
 mkdir -p "$CONFIG_DIR" "$CACHE_DIR"
 
-if [ ! -x "$VENV_PY" ]; then
+if [ ! -x "$VENV_PY" ] || ! "$VENV_PY" -c "import bs4, playwright" >/dev/null 2>&1; then
   "$PLUGIN_DIR/scripts/bootstrap.sh"
 fi
 

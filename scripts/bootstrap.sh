@@ -8,6 +8,6 @@ set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$DIR/scripts/env.sh"
 
-python3 -m venv "$DATA_DIR/venv"
+python3 -m venv --clear "$DATA_DIR/venv"
 "$DATA_DIR/venv/bin/pip" install --quiet -r "$DIR/requirements.txt"
 "$DATA_DIR/venv/bin/python" -m playwright install chromium
