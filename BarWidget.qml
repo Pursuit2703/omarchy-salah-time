@@ -386,18 +386,22 @@ BarWidget {
     }
   }
 
-  MouseArea {
+  // A stock button, not a bare MouseArea: it registers with the bar as a
+  // click target, which is what gives the pointing-hand cursor and lets the
+  // bar's own pointer layer forward presses to it.
+  WidgetButton {
     id: hoverArea
     anchors.fill: parent
-    hoverEnabled: true
-    acceptedButtons: Qt.LeftButton | Qt.RightButton
-    cursorShape: Qt.PointingHandCursor
-    onClicked: function(mouse) {
-      if (mouse.button === Qt.RightButton) {
+    bar: root.bar
+    labelVisible: false
+    hasVisualContent: true
+    onPressed: function(button) {
+      if (button === Qt.RightButton) {
         if (panelLoader.item) panelLoader.item.openSettings()
       } else {
         root.togglePanel()
       }
     }
   }
+
 }

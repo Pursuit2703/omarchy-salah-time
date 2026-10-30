@@ -18,6 +18,11 @@ history is in `git log`.
 - IPC: `omarchy-shell pursuit2703.salah-time toggle` and
   `omarchy-shell pursuit2703.salah-time.settings open`.
 
+### Fixed
+
+- Pointing-hand cursor on hover: the click area is now a stock
+  `WidgetButton`, which registers with the bar as a click target.
+
 ### Removed
 
 - Hover tooltip; the click panel shows the same information.
