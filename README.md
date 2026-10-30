@@ -33,13 +33,25 @@ First load bootstraps a Python virtualenv and downloads a headless Chromium
 (~110MB, one-time). This happens automatically in the background — the
 widget will just say "Salah" until it's done.
 
-Right-click the widget for **Salah Time Settings**:
-- **Change City** - live list from islom.uz
-- **Manage Reminders** - add/remove reminders (each is a prayer-or-all +
-  minutes-before), and toggle the notification sound
+Click the widget for the day's panel: the next prayer with a live
+countdown, progress since the previous prayer, and all six times.
+
+Right-click (or the panel's Settings button) for settings, inside the same
+panel:
+- **City** - searchable live list from islom.uz
+- **Remind me before** - one row per prayer (or all prayers) with a
+  minutes-before stepper; step down to Off to drop it
+- **Sound** - notification sound on/off and its volume
+
+On a left or right bar the widget stacks into the bar's width: the next
+prayer's letter inside a ring that fills from the previous prayer to the
+next, then the time left (`4h` / `17m`).
+
+`omarchy-shell pursuit2703.salah-time toggle` and
+`omarchy-shell pursuit2703.salah-time.settings open` work for keybindings.
 
 Comes with one default reminder: all prayers, 10 minutes before, sound on.
-Add as many more as you like - e.g. "All prayers, 15 min before" plus
+Set a per-prayer one on top - e.g. "All prayers, 10 min before" plus
 "Fajr, 30 min before" for an extra early one.
 
 ## Credits

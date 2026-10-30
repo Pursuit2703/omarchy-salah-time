@@ -24,7 +24,13 @@ BarWidget {
 
   property var scheduleData: null
   property string labelText: "Salah"
-  property string tooltipText: "Loading prayer times..."
+  // Vertical bar: the prayer's first letter in a filled pill, then the time
+  // left (h:mm, or just minutes in the last hour).
+  property string verticalBadge: ""
+  property var verticalTime: ["—"]
+  // 0..1, how far we are from the previous prayer to the next one; drawn as
+  // the ring around the letter on a vertical bar.
+  property real verticalProgress: 0
 
   // Reminders and sound-on-off are managed by right-click > Manage Reminders,
   // which edits remindersFile directly (scripts/manage_reminders.sh). Default
@@ -37,8 +43,8 @@ BarWidget {
   property string notifiedDate: ""
   property var notifiedKeys: ({})
 
-  implicitWidth: labelDisplay.implicitWidth + Style.space(16)
-  implicitHeight: barSize
+  implicitWidth: vertical ? barSize : labelDisplay.implicitWidth + Style.space(16)
+  implicitHeight: vertical ? verticalColumn.implicitHeight + Style.space(6) : barSize
 
   function dateKeyOf(date) {
     return date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate()
@@ -107,10 +113,21 @@ BarWidget {
     return "now"
   }
 
+  // One unit per line, so no line is wider than the clock's two digits.
+  function verticalDuration(totalSeconds) {
+    const sec = Math.max(0, Math.floor(totalSeconds))
+    const h = Math.floor(sec / 3600)
+    const m = Math.floor((sec % 3600) / 60)
+    if (h > 0) return [h + "h", m + "m"]
+    if (m > 0) return [m + "m"]
+    return ["now"]
+  }
+
   function updateDisplay() {
     if (!root.scheduleData || !root.scheduleData.times) {
       root.labelText = "Salah"
-      root.tooltipText = "No data yet - right-click for settings"
+      root.verticalBadge = ""
+      root.verticalTime = ["—"]
       return
     }
 
@@ -137,7 +154,8 @@ BarWidget {
     if (!chosen) chosen = soonestFallback
     if (!chosen) {
       root.labelText = "Salah"
-      root.tooltipText = "No data yet - right-click for settings"
+      root.verticalBadge = ""
+      root.verticalTime = ["—"]
       return
     }
 
@@ -146,18 +164,24 @@ BarWidget {
     const remaining = targetSeconds - nowSeconds
 
     root.labelText = chosen.label + " · " + root.formatDuration(remaining)
+    root.verticalBadge = chosen.label.charAt(0)
+    root.verticalTime = root.verticalDuration(remaining)
 
-    const lines = [
-      (root.scheduleData.city || "") + " — " + (root.scheduleData.weekday || ""),
-      "Next: " + chosen.label + " in " + root.formatDuration(remaining),
-      ""
-    ]
+    let prevMinute = null
     for (const ev of root.events) {
-      lines.push(ev.label + ": " + (times[ev.key] || "--:--"))
+      const minute = root.minutesOf(times[ev.key])
+      if (minute === null) continue
+      if (minute <= nowMinutes && (prevMinute === null || minute > prevMinute)) prevMinute = minute
     }
-    lines.push("")
-    lines.push("Right-click for settings")
-    root.tooltipText = lines.join("\n")
+    if (prevMinute === null) {
+      for (const ev of root.events) {
+        const minute = root.minutesOf(times[ev.key])
+        if (minute !== null && (prevMinute === null || minute > prevMinute)) prevMinute = minute
+      }
+      if (prevMinute !== null) prevMinute -= 1440
+    }
+    const span = prevMinute === null ? 0 : targetSeconds - prevMinute * 60
+    root.verticalProgress = span > 0 ? Math.max(0, Math.min(1, 1 - remaining / span)) : 0
   }
 
   FileView {
@@ -237,6 +261,7 @@ BarWidget {
 
   Text {
     id: labelDisplay
+    visible: !root.vertical
     anchors.centerIn: parent
     text: root.labelText
     color: root.bar ? root.bar.barForeground : Color.foreground
@@ -244,7 +269,122 @@ BarWidget {
     font.pixelSize: Style.font.body
   }
 
-  readonly property bool tooltipHovered: visible && opacity > 0 && hoverArea.containsMouse
+  readonly property color fg: root.bar ? root.bar.barForeground : Color.foreground
+  readonly property string barFont: root.bar ? root.bar.fontFamily : Style.font.family
+
+  Column {
+    id: verticalColumn
+    visible: root.vertical
+    anchors.centerIn: parent
+    width: root.barSize
+
+    // The next prayer's letter inside a ring that fills clockwise from the
+    // previous prayer to this one.
+    Item {
+      visible: root.verticalBadge !== ""
+      width: verticalColumn.width
+      height: Style.bar.iconSlot
+
+      Canvas {
+        id: ring
+        anchors.centerIn: parent
+        width: Math.round(Style.bar.iconSlot * 0.8)
+        height: width
+        readonly property real progress: root.verticalProgress
+        readonly property color tint: root.fg
+        onProgressChanged: requestPaint()
+        onTintChanged: requestPaint()
+        onPaint: {
+          const ctx = getContext("2d")
+          ctx.reset()
+          const r = width / 2 - 1.5
+          ctx.lineWidth = 1.6
+          ctx.strokeStyle = Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.25)
+          ctx.beginPath(); ctx.arc(width / 2, height / 2, r, 0, 2 * Math.PI); ctx.stroke()
+          ctx.strokeStyle = root.fg
+          ctx.beginPath()
+          ctx.arc(width / 2, height / 2, r, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * progress)
+          ctx.stroke()
+        }
+      }
+
+      OpticalGlyph {
+        anchors.fill: parent
+        text: root.verticalBadge
+        fontFamily: root.barFont
+        fontSize: Style.font.body * 0.8
+        color: root.fg
+      }
+    }
+
+    Repeater {
+      model: root.verticalTime
+
+      OpticalGlyph {
+        required property string modelData
+        width: verticalColumn.width
+        height: Math.round(Style.bar.iconSlot * 0.8)
+        text: modelData
+        fontFamily: root.barFont
+        fontSize: modelData.length > 2 ? Style.font.body * 0.85 : Style.font.body
+        color: root.fg
+      }
+    }
+  }
+
+  function injectPanel() {
+    var target = panelLoader.item
+    if (!target) return
+    target.bar = root.bar
+    target.anchorItem = root
+    target.hostWidget = root
+    target.scheduleData = root.scheduleData
+    target.reminders = root.reminders
+    target.soundEnabled = root.soundEnabled
+    target.soundVolume = root.soundVolume
+  }
+
+  onBarChanged: injectPanel()
+  onScheduleDataChanged: if (panelLoader.item) panelLoader.item.scheduleData = root.scheduleData
+  onRemindersChanged: if (panelLoader.item) panelLoader.item.reminders = root.reminders
+  onSoundEnabledChanged: if (panelLoader.item) panelLoader.item.soundEnabled = root.soundEnabled
+  onSoundVolumeChanged: if (panelLoader.item) panelLoader.item.soundVolume = root.soundVolume
+
+  readonly property bool panelOpen: panelLoader.item ? panelLoader.item.opened === true : false
+
+  // The bar and KeyboardPanel treat this widget as the popup's owner: they
+  // close it through close() and read opened back, so these must exist or
+  // the panel's open binding gets overwritten and it never shows again.
+  readonly property bool opened: panelOpen
+  readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing === true : false
+  function open() { if (panelLoader.item) panelLoader.item.open() }
+  function close() { if (panelLoader.item) panelLoader.item.close() }
+  function togglePanel() { if (panelLoader.item) panelLoader.item.toggle() }
+  function closeForPopoutSwitch() { if (panelLoader.item) panelLoader.item.closeForPopoutSwitch() }
+
+  // On a vertical bar the open-panel mark is one icon long, like the
+  // clock's, not a rule running the height of the whole stack.
+  readonly property real openPanelIndicatorHeight: Math.max(Style.space(10), Math.round(Style.bar.iconSlot * 0.55))
+
+  Loader {
+    id: panelLoader
+    active: true
+    source: Qt.resolvedUrl("Panel.qml")
+    visible: false
+    onLoaded: {
+      root.injectPanel()
+      Qt.callLater(root.injectPanel)
+    }
+  }
+
+  Connections {
+    target: panelLoader.item
+    function onRefreshRequested() { refreshProc.running = true }
+    function onSettingsRequested() {
+      if (panelLoader.item) panelLoader.item.close()
+      settingsProc.running = true
+    }
+  }
 
   MouseArea {
     id: hoverArea
@@ -254,12 +394,10 @@ BarWidget {
     cursorShape: Qt.PointingHandCursor
     onClicked: function(mouse) {
       if (mouse.button === Qt.RightButton) {
-        settingsProc.running = true
+        if (panelLoader.item) panelLoader.item.openSettings()
       } else {
-        refreshProc.running = true
+        root.togglePanel()
       }
     }
-    onEntered: if (root.bar) root.bar.showTooltip(root, root.tooltipText)
-    onExited: if (root.bar) root.bar.hideTooltip(root)
   }
 }
